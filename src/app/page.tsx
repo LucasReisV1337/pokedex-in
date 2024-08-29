@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { mockAbilities } from './mockData';
+import axios from 'axios'; 
 
 export default function Home() {
   const [pokemon, setPokemon] = useState('');
@@ -18,15 +18,17 @@ export default function Home() {
     }
   }, []);
 
-  const fetchAbilities = (pokemonName: string) => {
+  const fetchAbilities = async (pokemonName: string) => {
     if (!pokemonName.trim()) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const abilitiesData = mockAbilities[pokemonName.toLowerCase()];
-      if (abilitiesData) {
+      const response = await axios.get(`http://localhost:3000/pokemon/${pokemonName}`);
+      const abilitiesData = response.data.abilities;
+
+      if (abilitiesData.length > 0) {
         setAbilities(abilitiesData);
         setError(null);
       } else {
