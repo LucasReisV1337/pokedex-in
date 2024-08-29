@@ -1,16 +1,19 @@
 "use client";
+
 import { useState, useEffect } from 'react';
-import axios from 'axios'; 
-import { FaMoon, FaSun } from 'react-icons/fa'; // Adicione ícones para alternar entre modos
+import axios from 'axios';
+import { FaMoon, FaSun } from 'react-icons/fa';
+import Image from 'next/image';
+import { PokemonDetails } from './interface';
 
 export default function Home() {
   const [pokemon, setPokemon] = useState('');
   const [pokemonLS, setPokemonLS] = useState('');
-
-  const [abilities, setAbilities] = useState<string[]>([]);
+  const [pokemonDetails, setPokemonDetails] = useState<PokemonDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -21,11 +24,26 @@ export default function Home() {
     const lastSearch = localStorage.getItem('lastSearchedPokemon');
     if (lastSearch) {
       setPokemonLS(lastSearch);
-      fetchAbilities(lastSearch);
+      fetchPokemonDetails(lastSearch);
     }
+
+    const previousSearches = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+    setSuggestions(previousSearches);
   }, []);
 
-  const fetchAbilities = async (pokemonName: string) => {
+  useEffect(() => {
+    if (pokemon.trim()) {
+      const filteredSuggestions = JSON.parse(localStorage.getItem('searchHistory') || '[]')
+        .filter((p: string) =>
+          p.toLowerCase().includes(pokemon.toLowerCase())
+        );
+      setSuggestions(filteredSuggestions);
+    } else {
+      setSuggestions(JSON.parse(localStorage.getItem('searchHistory') || '[]'));
+    }
+  }, [pokemon]);
+
+  const fetchPokemonDetails = async (pokemonName: string) => {
     if (!pokemonName.trim()) return;
 
     setLoading(true);
@@ -33,19 +51,20 @@ export default function Home() {
 
     try {
       const response = await axios.get(`http://localhost:3000/pokemon/${pokemonName}`);
-      const abilitiesData = response.data.abilities;
+      const data = response.data;
 
-      if (abilitiesData.length > 0) {
-        setAbilities(abilitiesData);
-        setError(null);
-      } else {
-        setAbilities([]);
-        setError('No abilities found for this Pokémon');
-      }
+      setPokemonDetails({
+        abilities: data.abilities || [],
+        types: data.types || [],
+        stats: data.stats || [],
+        sprite: data.sprite || '',
+      });
+
+      setError(null);
     } catch (err) {
       console.error(err);
-      setAbilities([]);
-      setError('Failed to fetch abilities');
+      setPokemonDetails(null);
+      setError('Failed to fetch Pokémon details');
     } finally {
       setLoading(false);
     }
@@ -54,11 +73,27 @@ export default function Home() {
   const handleSearch = () => {
     if (pokemon.trim()) {
       setPokemonLS(pokemon);
-      fetchAbilities(pokemon);
-      localStorage.setItem('lastSearchedPokemon', pokemon); 
-      setPokemon(''); 
+      fetchPokemonDetails(pokemon);
+      localStorage.setItem('lastSearchedPokemon', pokemon);
+
+      const previousSearches = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+      if (!previousSearches.includes(pokemon)) {
+        previousSearches.push(pokemon);
+        localStorage.setItem('searchHistory', JSON.stringify(previousSearches));
+        setSuggestions(previousSearches);
+      }
+      
+      setPokemon('');
     }
   };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setPokemon(suggestion);
+    setSuggestions([]);
+    fetchPokemonDetails(suggestion);
+    localStorage.setItem('lastSearchedPokemon', suggestion);
+  };
+
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
@@ -79,44 +114,85 @@ export default function Home() {
           {darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         </span>
       </div>
-      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Pokémon Abilities</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Pokémon Details</h1>
       <div className="w-full max-w-md bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
         <input
           type="text"
           value={pokemon}
-          onChange={(e) => setPokemon(e.target.value.toLowerCase())}
+          onChange={(e) => setPokemon(e.target.value)}
           placeholder="Enter Pokémon name"
           className="w-full text-black dark:text-white p-3 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-300"
         />
+        {suggestions.length > 0 && (
+          <ul className="list-none ml-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+            {suggestions.map((suggestion, index) => (
+              <li 
+                key={index}
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                onClick={() => handleSuggestionClick(suggestion)}
+              >
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        )}
         <p className="mb-4 text-gray-600 dark:text-gray-300">You have searched for: <strong>{pokemonLS}</strong></p>
-        <div className="flex justify-center">
+        <div className="flex justify-center mb-4">
           <button
             onClick={handleSearch}
             className="bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-400 transition-colors duration-300 ease-in-out transform hover:scale-105"
             disabled={loading}
           >
-            {loading ? 'Loading...' : 'Get Abilities'}
+            {loading ? 'Loading...' : 'Get Details'}
           </button>
         </div>
         {error && <p className="text-red-500 mt-4 text-center">{error}</p>}
-        {abilities.length > 0 && (
-          <table className="mt-6 w-full border border-gray-300 dark:border-gray-600 rounded-lg">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-gray-700 border-b">
-                <th className="p-3 text-left text-gray-700 dark:text-gray-300">Ability</th>
-              </tr>
-            </thead>
-            <tbody>
-              {abilities.map((ability, index) => (
-                <tr key={index} className="border-b">
-                  <td className="p-3 text-gray-800 dark:text-gray-200">{ability}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {abilities.length === 0 && !loading && !error && (
-          <p className="mt-4 text-gray-500 dark:text-gray-400 text-center">Enter a Pokémon name and click Get Abilities to see the abilities.</p>
+        {pokemonDetails && (
+          <div className="mt-6 flex flex-col items-center">
+            <div className="flex flex-col items-center mb-4">
+              {pokemonDetails.sprite && (
+                <Image 
+                  src={pokemonDetails.sprite} 
+                  alt={pokemon} 
+                  width={128} 
+                  height={128} 
+                  className="mb-4 rounded-lg shadow-lg"
+                />
+              )}
+              <p className="text-xl font-semibold mb-2">Types:</p>
+              {pokemonDetails.types.length > 0 ? (
+                <ul className="list-none ml-0 mb-4 text-center">
+                  {pokemonDetails.types.map((type, index) => (
+                    <li key={index} className="text-gray-800 dark:text-gray-200">{type}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-600 dark:text-gray-300">No types available</p>
+              )}
+            </div>
+            <div className="flex flex-col items-center bg-gray-100 dark:bg-gray-700 p-4 rounded-lg shadow-lg w-full max-w-md">
+              <p className="text-xl font-semibold mb-2 text-center">Base Stats:</p>
+              {pokemonDetails.stats.length > 0 ? (
+                <ul className="list-none ml-0 mb-4 text-center">
+                  {pokemonDetails.stats.map((stat, index) => (
+                    <li key={index} className="text-gray-800 dark:text-gray-200">{`${stat.name}: ${stat.value}`}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-600 dark:text-gray-300">No stats available</p>
+              )}
+              <p className="text-xl font-semibold mb-2 text-center">Abilities:</p>
+              {pokemonDetails.abilities.length > 0 ? (
+                <ul className="list-none ml-0 text-center">
+                  {pokemonDetails.abilities.map((ability, index) => (
+                    <li key={index} className="text-gray-800 dark:text-gray-200">{ability}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-600 dark:text-gray-300">No abilities available</p>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
