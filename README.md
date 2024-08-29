@@ -1,6 +1,7 @@
 # Pokémon Details App
 
 Este é um aplicativo frontend desenvolvido com React e Next.js que permite aos usuários buscar detalhes sobre Pokémon. Ele inclui funcionalidade de pesquisa, histórico de buscas, modo escuro e mais.
+Por padrão, a branch mais estávael para testes e a "master".
 
 ## Funcionalidades
 
