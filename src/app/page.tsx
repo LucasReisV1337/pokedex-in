@@ -121,7 +121,7 @@ export default function Home() {
           value={pokemon}
           onChange={(e) => setPokemon(e.target.value)}
           placeholder="Enter Pokémon name"
-          className="w-full text-black dark:text-white p-3 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-300"
+          className="w-full text-black p-3 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-300"
         />
         {suggestions.length > 0 && (
           <ul className="list-none ml-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
