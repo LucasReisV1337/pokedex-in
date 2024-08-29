@@ -33,7 +33,7 @@ Para executar o aplicativo localmente, siga os passos abaixo:
     ```bash
    npm run dev
 
-O aplicativo estará disponível em http://localhost:3000.
+O aplicativo estará disponível em http://localhost:7000.
 
 ## Estrutura do Projeto
 
